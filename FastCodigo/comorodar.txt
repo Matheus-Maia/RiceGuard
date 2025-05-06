@@ -1,0 +1,15 @@
+
+# 1. Crie e entre na pasta de build
+mkdir -p build && cd build
+
+# 2. Gere os Makefiles em modo Debug (para rodar os testes)
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+
+# 3. Compile tudo
+make -j$(nproc)
+
+# 4. Rode todos os testes via CTest (mostra saída detalhada)
+ctest --verbose
+
+# 5. (Opcional) Execute diretamente o binário de testes
+./test_analise

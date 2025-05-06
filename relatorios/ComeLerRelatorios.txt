@@ -1,0 +1,43 @@
+Relatórios Gerados (Gráficos):
+1. Viabilidade Mensal (viabilidade_mensal.png):
+	O que mostra: Probabilidade média de sucesso do plantio em cada mês.
+
+	Como interpretar:
+
+	Barras altas = meses mais propícios para plantar.
+
+	Ex: Se Janeiro tem 0.8, significa 80% de chance de sucesso.
+
+2. Rendimento Médio (rendimento_mensal.png):
+	O que mostra: Expectativa média de produtividade por mês (0-1).
+
+	Como interpretar:
+
+	1 = rendimento máximo esperado.
+
+	Valores mostram perdas potenciais por estresse térmico.
+
+3. Riscos Mensais (riscos_mensais.png):
+	O que mostra:
+
+	Linha laranja: Risco de esbranquiçamento (Tmax >30°C)
+
+	Linha roxa: Risco de redução na moagem (Tmin >27°C)
+
+	Como interpretar:
+
+	Picos indicam meses com maiores problemas de qualidade.
+
+4. Evolução Diária (viabilidade_diaria_evolucao.png):
+	O que mostra:
+
+	Linha verde clara: Viabilidade diária
+
+	Linha verde escura: Média móvel de 30 dias
+
+	Como interpretar:
+
+	Identifica períodos específicos favoráveis dentro de um mês.
+
+	Tendências de melhora/piora ao longo do ano.
+
