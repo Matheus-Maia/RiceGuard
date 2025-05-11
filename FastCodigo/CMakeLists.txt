@@ -3,23 +3,53 @@ project(FastCodigo LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_BUILD_TYPE Release)
-add_compile_options(-O3 -march=native -ffast-math -funroll-loops)
-include_directories(${PROJECT_SOURCE_DIR}/include)
+
+# Opções de compilação
+add_compile_options(
+        -O3
+        -march=native
+        -ffast-math
+        -funroll-loops
+        -Wall
+        -Wextra
+        -Wpedantic
+)
+
+include_directories(${PROJECT_SOURCE_DIR}/src)
 find_package(OpenMP REQUIRED)
 find_package(GTest REQUIRED)
 
-add_library(core_lib src/core_logic/analise_viabilidade.cpp)
-target_link_libraries(core_lib PUBLIC OpenMP::OpenMP_CXX)
+# Fontes das bibliotecas
+set(VIAB_SOURCES
+        src/analise/analise_viabilidade.cpp
+        src/model/viab/fase.cpp
+)
 
-add_library(io_lib src/io/csv_reader.cpp)
-add_library(summary_lib src/summary/summary_generator.cpp)
+set(IO_SOURCES
+        src/model/io/csv_reader.cpp
+        src/model/io/json_loader.cpp
+)
 
+set(SUMMARY_SOURCES
+        src/model/summary/summary_generator.cpp
+)
+
+# Criar bibliotecas
+add_library(viab_lib ${VIAB_SOURCES})
+target_link_libraries(viab_lib PUBLIC OpenMP::OpenMP_CXX)
+
+add_library(io_lib ${IO_SOURCES})
+target_link_libraries(io_lib PUBLIC viab_lib) # Importante: io_lib depende de viab_lib
+
+add_library(summary_lib ${SUMMARY_SOURCES})
+target_link_libraries(summary_lib PUBLIC viab_lib) # summary_lib também usa tipos do viab_lib
+
+# Executável principal
 add_executable(analise src/main.cpp)
-target_link_libraries(analise PRIVATE core_lib io_lib summary_lib)
+target_link_libraries(analise PRIVATE viab_lib io_lib summary_lib)
 
-enable_testing()
 # Testes
-file(GLOB TEST_SOURCES "${PROJECT_SOURCE_DIR}/tests/*.cpp")
-add_executable(test_analise ${TEST_SOURCES})
-target_link_libraries(test_analise PRIVATE core_lib io_lib summary_lib GTest::GTest GTest::Main OpenMP::OpenMP_CXX)
+enable_testing()
+add_executable(test_analise src/tests/teste_analise_viabilidade.cpp)
+target_link_libraries(test_analise PRIVATE viab_lib io_lib summary_lib GTest::GTest GTest::Main)
 add_test(NAME AnaliseTests COMMAND test_analise)

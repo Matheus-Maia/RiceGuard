@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-namespace viab {
+namespace model::viab {
 struct Dia {
     std::string data_str;
     int mes;

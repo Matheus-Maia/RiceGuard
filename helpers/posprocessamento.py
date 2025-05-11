@@ -132,7 +132,7 @@ if __name__ == '__main__':
     script_dir = os.path.dirname(__file__)
     project_root = os.path.dirname(script_dir)
 
-    default_resumo = os.path.join(project_root, 'processados', 'resumo_mensal_cpp.csv')
+    default_resumo = os.path.join(project_root, 'processados', 'resumo_mensal.csv')
     default_detalhe = os.path.join(project_root, 'processados', 'analise_detalhada.csv')
     default_output_dir = os.path.join(project_root, 'relatorios')
 

@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     # Diretório de saída do C++ / Entrada para pós-processamento
     processed_dir = os.path.join(project_root, 'processados')
-    resumo_csv_cpp = os.path.join(processed_dir, 'resumo_mensal_cpp.csv')
+    resumo_csv_cpp = os.path.join(processed_dir, 'resumo_mensal.csv')
     detalhe_csv_cpp = os.path.join(processed_dir, 'analise_detalhada.csv')
 
     # Script de pós-processamento
