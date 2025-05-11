@@ -1,141 +1,132 @@
-# helpers/preprocessamento.py
 import pandas as pd
 import os
 import sys
+import random
+import json
+import argparse
 from tqdm import tqdm
 
-def preprocessar_dados(input_csv, output_csv):
-    """
-    Lê o CSV horário, agrega para diário (Tmin, Tmax) e salva
-    no formato esperado pelo C++ (Data;Tmax;Tmin).
-    """
-    print(f"Iniciando pré-processamento de: {input_csv}")
-    # Criar pasta de destino se não existir
-    output_dir = os.path.dirname(output_csv)
-    if output_dir: # Garante que não tente criar se for o diretório atual
-        os.makedirs(output_dir, exist_ok=True)
-        print(f"Diretório de saída '{output_dir}' assegurado.")
+# Caminho fixo para o JSON de fases, relativo a este script
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_FASES_JSON = os.path.join(SCRIPT_DIR, '../FastCodigo/config/fases_cultivo_arroz.json')
 
+# Carrega as fases de cultivo (para imputação randômica/opção ideal)
+def carregar_fases(json_path=DEFAULT_FASES_JSON):
+    with open(json_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    return data['fases']
+
+# Estratégias de imputação
+def imputar_interpolacao(df, col='temperatura'):
+    return (
+        df.set_index('datetime')[col]
+          .interpolate(method='time')
+          .fillna(method='ffill')
+          .fillna(method='bfill')
+          .values
+    )
+
+def imputar_vizinho(df, col='temperatura'):
+    return df[col].fillna(method='ffill').fillna(method='bfill')
+
+def imputar_randomica(series, fases):
+    opt_min = min(f['optMinT'] for f in fases)
+    opt_max = max(f['optMaxT'] for f in fases)
+    return series.apply(lambda x: random.uniform(opt_min, opt_max) if pd.isna(x) else x)
+
+def imputar_ideal(series, fases):
+    midpoint = sum((f['optMinT'] + f['optMaxT'])/2 for f in fases) / len(fases)
+    return series.fillna(midpoint)
+
+# Função de pré-processamento com logs e validações
+def preprocessar_dados(input_csv, output_csv, estrategia, fases_json=None):
+    print(f"Iniciando pré-processamento de: {input_csv}")
+    # Assegura diretório de saída
+    out_dir = os.path.dirname(output_csv)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+
+    # Leitura robusta do CSV
     try:
         df = pd.read_csv(
             input_csv,
-            sep=';',
-            decimal=',',
-            quotechar='"',
-            encoding='utf-8-sig',
-            dayfirst=True,
-            low_memory=False # Pode ajudar com arquivos grandes
+            sep=';', decimal=',', quotechar='"', encoding='utf-8-sig',
+            dayfirst=True, low_memory=False
         )
-        print("Arquivo CSV lido com sucesso.")
-    except FileNotFoundError:
-        print(f"Erro: Arquivo de entrada não encontrado em '{input_csv}'")
-        sys.exit(1)
+        print("CSV lido com sucesso.")
     except Exception as e:
-        print(f"Erro ao ler o CSV: {e}")
-        sys.exit(1)
+        sys.exit(f"Erro ao ler CSV: {e}")
 
-    # --- Validação de Colunas Essenciais ---
+    # Validação de colunas
     date_col = 'Data'
     time_col = 'Hora (UTC)'
-    temp_col = 'Temp. [Hora] (C)' # Ajuste se o nome da coluna for diferente
+    temp_col = 'Temp. [Hora] (C)'
+    for col in (date_col, time_col, temp_col):
+        if col not in df.columns:
+            sys.exit(f"Erro: coluna '{col}' não encontrada.")
 
-    required_cols = [date_col, time_col, temp_col]
-    missing_cols = [col for col in required_cols if col not in df.columns]
-    if missing_cols:
-        print(f"Erro: Colunas obrigatórias não encontradas no CSV: {', '.join(missing_cols)}")
-        print(f"Colunas disponíveis: {', '.join(df.columns)}")
-        sys.exit(1)
-    # --- Fim Validação ---
+    # Processa datetime e temperatura
+    df[time_col] = df[time_col].astype(str).str.zfill(4)
+    df['datetime'] = pd.to_datetime(
+        df[date_col] + ' ' + df[time_col],
+        format='%d/%m/%Y %H%M', errors='coerce'
+    )
+    df.dropna(subset=['datetime'], inplace=True)
+    df[temp_col] = pd.to_numeric(df[temp_col], errors='coerce')
 
-    print("Processando colunas de data e hora...")
-    try:
-        # Garantir que a hora seja string com 4 dígitos
-        df[time_col] = df[time_col].astype(str).str.zfill(4)
-        # Combinar data e hora, tratando possíveis erros
-        df['datetime'] = pd.to_datetime(
-            df[date_col] + ' ' + df[time_col],
-            format='%d/%m/%Y %H%M',
-            errors='coerce' # Transforma datas inválidas em NaT
-        )
-        # Remover linhas onde a conversão falhou
-        original_rows = len(df)
-        df.dropna(subset=['datetime'], inplace=True)
-        if len(df) < original_rows:
-            print(f"Aviso: {original_rows - len(df)} linhas removidas devido a data/hora inválidas.")
+    # Imputação
+    if estrategia == 'interpolacao':
+        df['temperatura'] = imputar_interpolacao(df, temp_col)
+    elif estrategia == 'vizinho':
+        df['temperatura'] = imputar_vizinho(df, temp_col)
+    elif estrategia in ('randomica', 'randômica'):  # aceitando ambas strings
+        fases = carregar_fases(fases_json)
+        df['temperatura'] = imputar_randomica(df[temp_col], fases)
+    elif estrategia == 'ideal':
+        fases = carregar_fases(fases_json)
+        df['temperatura'] = imputar_ideal(df[temp_col], fases)
+    else:
+        sys.exit(f"Estratégia inválida: {estrategia}")
 
-        # Tratar coluna de temperatura
-        df[temp_col] = pd.to_numeric(df[temp_col], errors='coerce')
-        original_rows = len(df)
-        df.dropna(subset=[temp_col], inplace=True)
-        if len(df) < original_rows:
-            print(f"Aviso: {original_rows - len(df)} linhas removidas devido a valores de temperatura inválidos.")
+    df.dropna(subset=['temperatura'], inplace=True)
+    print("Imputação concluída, NaNs restantes removidos.")
 
-    except Exception as e:
-        print(f"Erro durante o processamento das colunas de data/hora/temperatura: {e}")
-        sys.exit(1)
-
-    if df.empty:
-        print("Erro: Nenhum dado válido restante após a limpeza inicial.")
-        sys.exit(1)
-
-    print("Agregando dados por dia (Tmax, Tmin)...")
-    # Usar Grouper para garantir que todos os dias sejam considerados (opcional)
-    # diario = df.groupby(pd.Grouper(key='datetime', freq='D')).agg(
-    #     Tmax=(temp_col, 'max'),
-    #     Tmin=(temp_col, 'min')
-    # ).reset_index()
-
-    # Alternativa mais simples (pode pular dias sem dados)
+    # Agregação diária
     df['date_only'] = df['datetime'].dt.date
-    diario = df.groupby('date_only').agg(
-         Tmax=(temp_col, 'max'),
-         Tmin=(temp_col, 'min')
-    ).reset_index()
+    diario = df.groupby('date_only')['temperatura'].agg(Tmax='max', Tmin='min').reset_index()
+    diario.dropna(inplace=True)
+    print(f"Agregados {len(diario)} dias válidos.")
 
-
-    # Remover dias onde Tmax ou Tmin não puderam ser calculados (se houver)
-    diario.dropna(subset=['Tmax', 'Tmin'], inplace=True)
-
-    if diario.empty:
-        print("Erro: Nenhum dado diário pôde ser agregado.")
-        sys.exit(1)
-
-    print("Formatando e salvando dados pré-processados...")
-    # Formatar a data como DD/MM/YYYY para o C++ ler
-    # Certifique-se que 'date_only' é datetime antes de formatar
+    # Salvamento
     diario['Data'] = pd.to_datetime(diario['date_only']).dt.strftime('%d/%m/%Y')
+    diario[['Data', 'Tmax', 'Tmin']].to_csv(
+        output_csv, index=False, sep=';', decimal='.', float_format='%.1f'
+    )
+    print(f"Dados salvos em {output_csv} usando '{estrategia}'")
 
-    # Selecionar e salvar colunas no formato CSV esperado pelo C++
-    try:
-        diario[['Data', 'Tmax', 'Tmin']].to_csv(
-            output_csv,
-            index=False,
-            sep=';',      # Usar ponto e vírgula como separador
-            decimal='.'   # Usar ponto como separador decimal
-            )
-        print(f"Dados pré-processados salvos com sucesso em: {output_csv}")
-    except Exception as e:
-        print(f"Erro ao salvar o arquivo pré-processado: {e}")
-        sys.exit(1)
-
+# Interface: argv (fluxo existente) ou interativo
 if __name__ == '__main__':
-    # --- Configuração dos Caminhos ---
-    # Assume que o script está em 'helpers/' e o CSV original na raiz
-    script_dir = os.path.dirname(__file__)
-    project_root = os.path.dirname(script_dir) # Vai para o diretório pai (raiz do projeto)
+    parser = argparse.ArgumentParser(
+        description='Pré-processa CSV horário em diário com imputação')
+    parser.add_argument('input_csv', nargs='?', help='Arquivo CSV horário')
+    parser.add_argument('output_csv', nargs='?', help='Arquivo CSV diário de saída')
+    parser.add_argument('-e', '--estrategia',
+                        choices=['interpolacao', 'vizinho', 'randomica', 'randômica', 'ideal'],
+                        help='Estratégia de imputação')
+    parser.add_argument('-f', '--fases', default=DEFAULT_FASES_JSON,
+                        help='JSON de fases (para randômica/ideal)')
+    args = parser.parse_args()
 
-    default_input = os.path.join(project_root, 'dados_ano.csv')
-    default_output = os.path.join(project_root, 'preprocessed', 'dados_diarios.csv')
-
-    # Permite sobrescrever caminhos via argumentos de linha de comando
-    input_file = sys.argv[1] if len(sys.argv) > 1 else default_input
-    output_file = sys.argv[2] if len(sys.argv) > 2 else default_output
-    # --- Fim Configuração ---
-
-    if not os.path.exists(input_file):
-         print(f"Erro: Arquivo de entrada '{input_file}' não encontrado.")
-         print("Uso: python helpers/preprocessamento.py [arquivo_entrada.csv] [arquivo_saida.csv]")
-         sys.exit(1)
-
-    preprocessar_dados(input_file, output_file)
-    print("Pré-processamento concluído.")
+    # Se não passou args, entra no modo interativo (fluxo manual)
+    if not args.input_csv or not args.output_csv or not args.estrategia:
+        print("=== Preprocessamento Interativo ===")
+        sel = input("Escolha 1) interpolacao 2) vizinho 3) randomica 4) ideal: ")
+        opts = {'1':'interpolacao','2':'vizinho','3':'randomica','4':'ideal'}
+        est = opts.get(sel)
+        if not est:
+            sys.exit("Seleção inválida.")
+        in_csv = args.input_csv or 'dados_horario.csv'
+        out_csv = args.output_csv or 'dados_diarios.csv'
+        preprocessar_dados(in_csv, out_csv, est, args.fases)
+    else:
+        preprocessar_dados(args.input_csv, args.output_csv, args.estrategia, args.fases)
