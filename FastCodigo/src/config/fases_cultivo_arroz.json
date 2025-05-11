@@ -1,85 +1,58 @@
 {
- "fases": [
-        {
-            "nome": "Germinação",
-            "minT": 10,
-            "maxT": 45,
-            "optMinT": 20,
-            "optMaxT": 35,
-            "durMin": 5,
-            "durMax": 15
-        },
-        {
-            "nome": "Emergência e estabelecimento da plântula",
-            "minT": 12,
-            "maxT": 35,
-            "optMinT": 25,
-            "optMaxT": 30,
-            "durMin": 10,
-            "durMax": 20
-        },
-        {
-            "nome": "Desenvolvimento da raiz",
-            "minT": 16,
-            "maxT": 35,
-            "optMinT": 25,
-            "optMaxT": 28,
-            "durMin": 14,
-            "durMax": 21
-        },
-        {
-            "nome": "Alongamento da folha",
-            "minT": 7,
-            "maxT": 45,
-            "optMinT": 31,
-            "optMaxT": 31,
-            "durMin": 21,
-            "durMax": 35
-        },
-        {
-            "nome": "Perfilhamento",
-            "minT": 9,
-            "maxT": 33,
-            "optMinT": 25,
-            "optMaxT": 31,
-            "durMin": 14,
-            "durMax": 28
-        },
-        {
-            "nome": "Diferenciação do primórdio floral",
-            "minT": 15,
-            "maxT": 35,
-            "optMinT": 25,
-            "optMaxT": 30,
-            "durMin": 7,
-            "durMax": 14
-        },
-        {
-            "nome": "Emissão da panícula",
-            "minT": 15,
-            "maxT": 38,
-            "optMinT": 25,
-            "optMaxT": 28,
-            "durMin": 7,
-            "durMax": 10
-        },
-        {
-            "nome": "Antese",
-            "minT": 22,
-            "maxT": 35,
-            "optMinT": 30,
-            "optMaxT": 33,
-            "durMin": 5,
-            "durMax": 7
-        },
-        {
-            "nome": "Maturação",
-            "minT": 12,
-            "maxT": 30,
-            "optMinT": 20,
-            "optMaxT": 25,
-            "durMin": 25,
-            "durMax": 35
-        }
-    ]
+  "fases": [
+    {
+      "nome": "Germinação",
+      "minT": 10,
+      "maxT": 40,
+      "optMinT": 25,
+      "optMaxT": 35,
+      "durMin": 2,
+      "durMax": 5
+    },
+    {
+      "nome": "Emergência",
+      "minT": 12,
+      "maxT": 35,
+      "optMinT": 25,
+      "optMaxT": 30,
+      "durMin": 7,
+      "durMax": 14
+    },
+    {
+      "nome": "Perfilhamento",
+      "minT": 18,
+      "maxT": 35,
+      "optMinT": 25,
+      "optMaxT": 30,
+      "durMin": 14,
+      "durMax": 28
+    },
+    {
+      "nome": "Alongamento",
+      "minT": 20,
+      "maxT": 38,
+      "optMinT": 25,
+      "optMaxT": 32,
+      "durMin": 21,
+      "durMax": 35
+    },
+    {
+      "nome": "Floração (Antese)",
+      "minT": 22,
+      "maxT": 35,
+      "optMinT": 28,
+      "optMaxT": 32,
+      "durMin": 5,
+      "durMax": 10
+    },
+    {
+      "nome": "Maturação",
+      "minT": 15,
+      "maxT": 30,
+      "optMinT": 20,
+      "optMaxT": 25,
+      "durMin": 25,
+      "durMax": 40
+    }
+  ]
 }
